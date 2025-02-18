@@ -39,24 +39,69 @@ const path = require('path');
  *         description: Server error
  */
 module.exports = async function (context, req) {
+    context.log('Processing single file upload request');
+    context.log('Headers:', JSON.stringify(req.headers));
+    
     try {
         if (!req.body || !req.headers['content-type']) {
-            return {
+            context.log('No request body or content-type header');
+            context.res = {
                 status: 400,
-                body: "Please provide a file in the request body"
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: { error: "Please provide a file in the request body" }
             };
+            return;
+        }
+
+        // Log the request body for debugging
+        context.log('Request body:', req.body);
+        context.log('Content-Type:', req.headers['content-type']);
+
+        // Handle the raw body data
+        let rawBody = req.body;
+        if (typeof req.body === 'string') {
+            rawBody = Buffer.from(req.body);
+        } else if (req.body instanceof Uint8Array) {
+            rawBody = Buffer.from(req.body);
         }
 
         // Parse the multipart form data
         const boundary = multipart.getBoundary(req.headers['content-type']);
-        const parts = multipart.parse(req.body, boundary);
-        const filePart = parts.find(part => part.type === 'file');
+        context.log('Boundary:', boundary);
 
-        if (!filePart) {
-            return {
+        if (!boundary) {
+            context.log('No boundary found in content-type');
+            context.res = {
                 status: 400,
-                body: "No file found in the request"
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: { error: "Invalid content-type header" }
             };
+            return;
+        }
+
+        const parts = multipart.parse(rawBody, boundary);
+        context.log('Parsed parts:', JSON.stringify(parts, null, 2));
+
+        // Look for the file part with name 'newfile'
+        const filePart = parts.find(part => {
+            context.log('Checking part:', JSON.stringify(part));
+            return part.name === 'newfile';
+        });
+
+        if (!filePart || !filePart.data) {
+            context.log('No file part found in request');
+            context.res = {
+                status: 400,
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: { error: "No file found in the request" }
+            };
+            return;
         }
 
         // Create uploads directory if it doesn't exist
@@ -64,14 +109,18 @@ module.exports = async function (context, req) {
         await fs.mkdir(uploadsDir, { recursive: true });
 
         // Generate unique filename
-        const fileName = `${Date.now()}-${filePart.filename}`;
+        const fileName = `${Date.now()}-${filePart.filename || 'unnamed-file'}`;
         const filePath = path.join(uploadsDir, fileName);
 
         // Write the file
         await fs.writeFile(filePath, filePart.data);
-
-        return {
+        
+        context.log(`File successfully uploaded: ${fileName}`);
+        context.res = {
             status: 200,
+            headers: {
+                'Content-Type': 'application/json'
+            },
             body: {
                 message: "File uploaded successfully",
                 fileName: fileName,
@@ -80,9 +129,14 @@ module.exports = async function (context, req) {
         };
     } catch (error) {
         context.log.error('Error uploading file:', error);
-        return {
+        context.res = {
             status: 500,
-            body: `Error uploading file: ${error.message}`
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: {
+                error: `Error uploading file: ${error.message}`
+            }
         };
     }
 };
