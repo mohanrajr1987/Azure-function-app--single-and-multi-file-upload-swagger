@@ -1,21 +1,22 @@
 # Azure Function File Upload
 
-This project contains Azure Functions for handling file uploads to Azure Blob Storage.
+This project contains Azure Functions for handling file uploads with Swagger documentation.
 
 ## Features
 
 - Single file upload endpoint
 - Multiple file upload endpoint
-- Automatic container creation
-- Unique file naming
-- Error handling
+- Swagger UI documentation
+- Automatic file storage
+- Unique file naming with timestamps
+- Detailed error handling and logging
+- JSON responses
 
 ## Prerequisites
 
 1. Node.js 18 or later
 2. Azure Functions Core Tools
-3. Azure Storage Account
-4. Azure Functions extension for VS Code (recommended)
+3. Azure Functions extension for VS Code (recommended)
 
 ## Setup
 
@@ -24,38 +25,103 @@ This project contains Azure Functions for handling file uploads to Azure Blob St
    npm install
    ```
 
-2. Configure local.settings.json:
-   - Add your Azure Storage connection string to `AZURE_STORAGE_CONNECTION_STRING`
-   - Optionally modify `AZURE_STORAGE_CONTAINER_NAME` (default: "uploads")
+2. Start the function app:
+   ```bash
+   func start
+   ```
 
-## Endpoints
+## API Documentation
+
+Access the Swagger UI documentation at: `http://localhost:7071/api/docs`
+
+### Endpoints
+
+#### 1. Single File Upload
+- **URL**: `/api/upload/single`
+- **Method**: POST
+- **Content-Type**: multipart/form-data
+- **Parameter Name**: `newfile`
+- **Description**: Uploads a single file to the server
+
+##### Example Response (200 OK):
+```json
+{
+  "message": "File uploaded successfully",
+  "fileName": "1739873017591-example.jpg",
+  "path": "/uploads/1739873017591-example.jpg"
+}
+```
+
+#### 2. Multiple File Upload
+- **URL**: `/api/upload/multiple`
+- **Method**: POST
+- **Content-Type**: multipart/form-data
+- **Parameter Name**: `newfiles` (use multiple times for multiple files)
+- **Description**: Uploads multiple files in a single request
+
+##### Example Response (200 OK):
+```json
+{
+  "message": "Files uploaded successfully",
+  "files": [
+    {
+      "originalName": "example1.jpg",
+      "uploadedName": "1739873193987-example1.jpg",
+      "path": "/uploads/1739873193987-example1.jpg"
+    },
+    {
+      "originalName": "example2.jpg",
+      "uploadedName": "1739873193988-example2.jpg",
+      "path": "/uploads/1739873193988-example2.jpg"
+    }
+  ]
+}
+```
+
+## Testing with cURL
 
 ### Single File Upload
-- URL: `/api/upload/single`
-- Method: POST
-- Content-Type: multipart/form-data
-- Body: Include file in form data
+```bash
+# Basic usage
+curl -X POST -F "newfile=@/path/to/file.jpg" http://localhost:7071/api/upload/single
+
+# With verbose output
+curl -v -X POST -F "newfile=@/path/to/file.jpg" http://localhost:7071/api/upload/single
+```
 
 ### Multiple File Upload
-- URL: `/api/upload/multiple`
-- Method: POST
-- Content-Type: multipart/form-data
-- Body: Include multiple files in form data
-
-## Running Locally
-
 ```bash
-npm start
+# Basic usage
+curl -X POST \
+  -F "newfiles=@/path/to/file1.jpg" \
+  -F "newfiles=@/path/to/file2.jpg" \
+  http://localhost:7071/api/upload/multiple
+
+# With verbose output
+curl -v -X POST \
+  -F "newfiles=@/path/to/file1.jpg" \
+  -F "newfiles=@/path/to/file2.jpg" \
+  http://localhost:7071/api/upload/multiple
 ```
 
-## Testing
+## Error Handling
 
-You can test the endpoints using tools like Postman or curl:
+The API returns appropriate HTTP status codes and JSON responses:
 
-```bash
-# Single file upload
-curl -X POST http://localhost:7071/api/upload/single -F "file=@/path/to/file"
+- **400 Bad Request**: When no file is provided or the request is invalid
+- **500 Internal Server Error**: When there's a server-side error
 
-# Multiple file upload
-curl -X POST http://localhost:7071/api/upload/multiple -F "file1=@/path/to/file1" -F "file2=@/path/to/file2"
+Example error response:
+```json
+{
+  "error": "No file found in the request"
+}
 ```
+
+## File Storage
+
+Uploaded files are stored in the `uploads` directory with the following naming convention:
+- Timestamp prefix to ensure uniqueness
+- Original filename preserved
+- Example: `1739873017591-original.jpg`
+
