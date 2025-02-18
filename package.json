@@ -1,0 +1,20 @@
+{
+  "name": "local-function-file-upload",
+  "version": "1.0.0",
+  "description": "Azure Functions for handling local file uploads",
+  "scripts": {
+    "start": "func start",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "dependencies": {
+    "multipart-formdata": "^1.1.0",
+    "swagger-ui-express": "^5.0.0",
+    "swagger-jsdoc": "^6.2.8"
+  },
+  "devDependencies": {
+    "@azure/functions": "^4.0.0"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}
